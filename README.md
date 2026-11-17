@@ -1,107 +1,536 @@
 # Game-Theoretic GAN Privacy
+### A Game-Theoretic Approach to Privacy–Utility Trade-offs in Tabular Generative Adversarial Networks
 
-A reproducible semester-project implementation for studying privacy-utility strategy selection in a tabular GAN. It trains an ordinary GAN and score-gap-regularized variants, evaluates utility and membership inference separately, then solves a finite-grid Stackelberg game for the privacy strength.
+## 1. Project Overview
 
-## Project layout
+This project investigates the trade-off between **data privacy and data utility** in Tabular Generative Adversarial Networks (GANs) using Game Theory.
 
-```text
-configs/default.yaml       Experiment, split, game and attack settings
-data/README.md             Dataset source and preprocessing notes
-src/data.py                UCI Adult download, encoding and disjoint splits
-src/gan.py                 Tabular GAN and differentiable regularizer
-src/attacks.py             Distance and shadow-model membership attacks
-src/evaluation.py          Held-out utility and feature-distribution metrics
-src/game.py                Validated finite-grid Stackelberg solver
-src/experiments.py         Seeded experiment runner, summaries and report
-tests/                     Mathematical and pipeline tests
-results/raw/               Per-run metrics and failure records
-results/tables/            Aggregates, strategies and sensitivity results
-results/figures/           Generated analysis plots
-reports/research_report.md Report regenerated from saved outputs
+Generative Adversarial Networks can generate synthetic datasets that resemble real-world data. However, they may unintentionally expose information about records used during training, creating privacy risks such as Membership Inference Attacks (MIA).
+
+To address this problem, this project introduces a game-theoretic framework in which a data owner and a potential attacker interact strategically.
+
+The data owner selects a privacy regularization strength (`lambda`) to reduce membership leakage while preserving the usefulness of generated synthetic data. The attacker observes this choice and selects the number of synthetic data release batches to maximize its attack payoff.
+
+A finite-grid **Stackelberg Game** is used to identify the optimal privacy strategy by considering both the owner's utility and the attacker's best response.
+
+The project implements and evaluates:
+- A standard Tabular GAN baseline.
+- Score-gap-regularized GAN models.
+- Black-box membership inference attacks.
+- Shadow-model-based membership inference attacks.
+- Privacy and utility evaluation.
+- Stackelberg game-based strategy optimization.
+- Sensitivity analysis across different game parameters.
+
+The implementation uses the UCI Adult Income Dataset as its benchmark dataset.
+
+---
+
+## 2. Project Information
+
+| Detail | Information |
+|---|---|
+| Project Title | Game-Theoretic GAN Privacy |
+| Project Domain | Artificial Intelligence, Generative AI, Game Theory, Data Privacy |
+| Model | Tabular Generative Adversarial Network |
+| Game Theory Approach | Stackelberg Game |
+| Dataset | UCI Adult Income Dataset |
+| Programming Language | Python |
+| Framework | PyTorch |
+| Evaluation | Utility Metrics and Membership Inference Attacks |
+
+### Group Members
+
+| Student Name | Roll Number |
+|---|---|
+| ARUNJAY SACHAN | I24AI024 |
+| PURVA SOLANKI | I24AI013 |
+
+---
+
+## 3. GitHub Repository
+
+**GitHub Repository Link:**
+
+[PASTE YOUR GITHUB REPOSITORY LINK HERE]
+
+The complete source code, configuration files, experiment results, documentation, and testing files will be maintained in this repository.
+
+---
+
+## 4. Dataset Resources
+
+### UCI Adult Income Dataset
+
+This project uses the UCI Adult Income Dataset, which contains demographic and employment-related information used to predict whether an individual's annual income exceeds $50,000.
+
+**Official Dataset Resource:**
+
+https://archive.ics.uci.edu/dataset/2/adult
+
+**Dataset Information:**
+
+- Dataset Name: Adult (Census Income)
+- Source: UCI Machine Learning Repository
+- Data Type: Tabular
+- Features: Numerical and categorical attributes
+- Target Variable: Income
+- Primary Application: Income classification and synthetic tabular data generation.
+
+### Dataset Preprocessing
+
+The project performs the following preprocessing operations:
+
+1. Downloads the dataset from the UCI repository.
+2. Selects and cleans the required dataset columns.
+3. Handles missing and categorical values.
+4. Encodes categorical features using One-Hot Encoding.
+5. Processes numerical features.
+6. Creates separate and disjoint data splits for GAN training, reference data, membership attack evaluation, and held-out utility evaluation.
+
+The encoders are fitted using GAN member training records only. Unknown categories in reference records are handled safely.
+
+The dataset is downloaded automatically during the data preparation stage, so manual downloading is not required.
+
+---
+
+## 5. Implementation Environment
+
+The project is implemented using Python and PyTorch.
+
+### Software Requirements
+
+| Component | Requirement |
+|---|---|
+| Programming Language | Python 3.10–3.13 |
+| Deep Learning Framework | PyTorch |
+| Numerical Computing | NumPy |
+| Data Processing | Pandas, Scikit-learn |
+| Visualization | Matplotlib |
+| Configuration | PyYAML |
+| Testing | Pytest |
+| Experiment Configuration | YAML |
+| Operating System | Windows / Linux / macOS |
+
+### Hardware Requirements
+
+Recommended environment:
+
+- Processor: Modern multi-core CPU
+- RAM: 8 GB or higher
+- Storage: Sufficient space for datasets and experiment outputs
+- GPU: Optional; CUDA-compatible GPU recommended for faster training.
+
+The project can also run on a CPU, although full experiments may take longer.
+
+---
+
+## 6. Environment Setup and Installation
+
+Follow the steps below to configure and execute the project.
+
+### Step 1: Clone the Repository
+
+```bash
+git clone <YOUR_GITHUB_REPOSITORY_URL>
 ```
 
-## Environment and data
+Navigate to the project directory:
 
-Python 3.10–3.13 is supported. From this directory:
+```bash
+cd game-theoretic-gan-privacy
+```
+
+### Step 2: Create a Virtual Environment
 
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+```
+
+Activate the environment.
+
+**Windows (PowerShell):**
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+**Linux / macOS:**
+
+```bash
+source .venv/bin/activate
+```
+
+### Step 3: Install Dependencies
+
+Upgrade pip:
+
+```bash
+python -m pip install --upgrade pip
+```
+
+Install the required libraries:
+
+```bash
 python -m pip install -r requirements.txt
+```
+
+### Step 4: Prepare the Dataset
+
+Execute the following command:
+
+```bash
 python -m src.cli prepare-data
 ```
 
-The preparation command downloads the UCI Adult benchmark files into `data/raw/` and writes the selected, cleaned columns under `data/processed/`. See [data/README.md](data/README.md) for attribution, selected columns, and preprocessing. Encoders are fit on GAN member rows only; unknown reference categories are safely ignored by the one-hot encoder.
+This command downloads the UCI Adult dataset, performs preprocessing, and saves the processed dataset in the appropriate directory.
 
-## Mechanism and threat model
+### Step 5: Run a Pipeline Test
 
-The generator and discriminator are compact MLPs. The discriminator objective is
+Before running the complete experiments, execute:
 
-```text
-L_D = BCE(real, 1) + BCE(fake, 0) + lambda * (mean(D(member)) - mean(D(reference)))^2
+```bash
+python -m src.cli smoke-test
 ```
 
-The score-gap term remains connected to discriminator parameters and its adversarial and privacy components are logged separately. `lambda=0` recovers the ordinary GAN objective. The reference records are used by the training objective, so they are separate from the untouched membership-attack non-members. The split also reserves an independent held-out test set for utility measurements.
+This checks the basic functionality of the pipeline. Smoke-test results are intended for validation and should not be treated as confirmatory research results.
 
-The baseline black-box attacker scores a candidate by distance to the nearest released row, using categorical mismatch and scaled numeric distance. The shadow-model attacker fits a logistic classifier on release-distance summaries from separate shadow models. Its classifier is trained using shadow membership labels; target evaluation labels are used only to report metrics. Both attacks are run for each configured privacy strength and release budget. Results include ROC-AUC, attack advantage (`max(TPR - FPR)` over score thresholds), candidate-resampling confidence intervals, and random baselines.
+---
 
-The regularizer is an empirical training heuristic. It is not differential privacy and offers no formal privacy guarantee. A low AUC for these attacks does not establish that all membership information has been removed.
+## 7. Project Methodology
 
-## Game model
+The project consists of three major components.
 
-The owner (leader) chooses the privacy weight `lambda`. After seeing it, the attacker (follower) chooses `b`, the number of independent synthetic release batches. The project uses
+### 7.1 Generative Adversarial Network (GAN)
+
+The GAN consists of two neural networks:
+
+**Generator:**
+- Learns the underlying distribution of the training data.
+- Generates synthetic tabular records.
+- Attempts to produce records that resemble real data.
+
+**Discriminator:**
+- Distinguishes between real and generated records.
+- Learns to identify differences between real and synthetic data.
+
+The discriminator objective includes an additional privacy regularization term.
+
+The implemented objective is:
+
+```text
+L_D = BCE(real, 1) + BCE(fake, 0)
+      + lambda * (mean(D(member)) - mean(D(reference)))^2
+```
+
+Where:
+
+- `BCE` represents Binary Cross Entropy.
+- `D(real)` represents discriminator scores.
+- `member` represents records used to train the GAN.
+- `reference` represents separate reference records.
+- `lambda` controls the strength of privacy regularization.
+
+When `lambda = 0`, the privacy regularization term becomes zero, recovering the ordinary GAN discriminator objective.
+
+### 7.2 Membership Inference Attacks
+
+The project evaluates privacy leakage using two membership inference attacks.
+
+**A. Distance-Based Black-Box Attack**
+
+- Measures the distance between candidate records and released synthetic records.
+- Uses categorical mismatch and scaled numerical distances.
+- Uses nearest-neighbor distance to determine membership-related scores.
+
+**B. Shadow-Model-Based Attack**
+
+- Trains separate shadow models to simulate membership behavior.
+- Extracts release-distance features.
+- Trains a logistic regression classifier using shadow membership labels.
+- Evaluates the attack against the target model without using target evaluation labels for training.
+
+Both attacks are evaluated using:
+
+- ROC-AUC
+- Attack Advantage
+- Candidate-resampling Confidence Intervals
+- Random Baseline Comparisons
+
+### 7.3 Stackelberg Game Theory Model
+
+The project implements a leader-follower Stackelberg Game.
+
+**Leader: Data Owner**
+
+The data owner selects the privacy regularization parameter:
+
+`lambda`
+
+**Follower: Attacker**
+
+After observing the owner's decision, the attacker selects:
+
+`b = Number of Independent Synthetic Release Batches`
+
+The payoff functions are:
+
+**Attacker's Utility:**
 
 ```text
 U_A(lambda, b) = P(lambda, b) - c_A * b
+```
+
+**Owner's Utility:**
+
+```text
 U_O(lambda, b) = Q(lambda) - alpha * P(lambda, b) - C_O(lambda)
+```
+
+**Owner's Regularization Cost:**
+
+```text
 C_O(lambda) = c_O * lambda / (1 + lambda)
 ```
 
-`P` is the strongest measured attack advantage among the configured attacks. `Q` is the F1 score of a downstream classifier trained on synthetic data and evaluated on held-out real data; the real-trained F1 and the synthetic-trained F1 are both reported. `c_A` and `c_O` are configured cost scales. The attacker maximizes its payoff for each candidate `lambda`; the owner then maximizes payoff against that best response. Ties go to lower `b`, then lower `lambda`. The reported result is optimal only over the tested finite grids, not a continuous global equilibrium.
+Where:
 
-The comparison table includes: (A) ordinary GAN (`lambda=0`), (B) configured fixed regularization, (C) game-selected regularization, and (D) the `lambda` selected by mean utility without considering attacker payoff. Each is evaluated at the attacker's measured best-response budget.
+- `P(lambda, b)` = Strongest measured membership attack advantage.
+- `Q(lambda)` = F1 score of a downstream classifier trained on synthetic data and evaluated on held-out real data.
+- `c_A` = Attacker's release cost.
+- `c_O` = Owner's privacy regularization cost scale.
+- `alpha` = Privacy-risk penalty assigned by the owner.
+- `lambda` = Privacy regularization strength.
+- `b` = Number of synthetic release batches.
 
-## Run the workflow
+The attacker first maximizes its payoff for each possible privacy strategy. The owner then selects the privacy strategy that maximizes its payoff against the attacker's best response.
+
+The solver evaluates a finite set of candidate strategies and returns the optimal strategy within the configured search grids.
+
+---
+
+## 8. Experiment Execution
+
+All experiment parameters are configurable through:
+
+```text
+configs/default.yaml
+```
+
+This includes:
+- Random seeds.
+- Privacy regularization values.
+- Synthetic release budgets.
+- GAN training epochs.
+- Shadow-model configurations.
+- Data split fractions.
+- Game-theoretic payoff parameters.
+- Output directories.
+
+### Run the Complete Experiment
+
+Execute:
 
 ```bash
-# Fast pipeline check; results are explicitly marked as smoke evidence
-python -m src.cli smoke-test
-
-# Full configured study (3 seeds, 6 lambdas, 4 release budgets, 2 shadow models)
 python -m src.cli run-experiments --mode full
-python -m src.cli analyze
+```
 
-# Optional individual steps
+After the experiments finish, generate the analysis:
+
+```bash
+python -m src.cli analyze
+```
+
+### Additional Commands
+
+Run the baseline:
+
+```bash
 python -m src.cli baseline --mode full
+```
+
+Run membership inference checks:
+
+```bash
 python -m src.cli mia-check
+```
+
+Solve the Stackelberg game:
+
+```bash
 python -m src.cli solve-game
+```
+
+Run unit and pipeline tests:
+
+```bash
 python -m pytest -q
 ```
 
-All experiment settings live in `configs/default.yaml`. Change the seed list, lambda grid, budgets, epochs, shadow count, split fractions, payoff values, or output locations there. Full runs save the exact config snapshot to `results/run_config.json`. Each seed uses the same split protocol across all lambdas; split fingerprints make runs traceable. Failed configurations are recorded in `results/raw/failures.csv`, and successful measurements are saved in `results/raw/experiments.csv`.
+The configured full experiment uses three random seeds, six privacy regularization values, four release budgets, and two shadow models.
 
-## Outputs
+---
 
-- `results/raw/experiments.csv`: per-seed, per-lambda, per-budget utility, attack, loss and runtime metrics, including per-epoch target and shadow loss histories.
-- `results/raw/failures.csv`: failed runs with error type and message.
-- `results/tables/summary.csv`: means, standard deviations and run counts.
-- `results/tables/game_solution.csv`: attacker best response and owner payoff for every lambda and alpha.
-- `results/tables/strategy_comparison.csv`: the four strategy conditions.
-- `results/tables/sensitivity.csv`: attacker-cost and lambda-grid sensitivity.
-- `results/figures/`: utility, attack, runtime, privacy-utility, game response and condition plots.
-- `reports/research_report.md`: regenerated report based on the saved experiment rows.
-- `results/processed/synthetic_preview.csv`: a small synthetic data preview.
+## 9. Project Directory Structure
 
-Run `analyze` after the full experiments to regenerate the tables, game solution, figures and report. The solver and report only use saved successful rows; no unrun full result is implied. The `smoke-test` command is for pipeline validation and must not be cited as confirmatory research evidence.
+```text
+game-theoretic-gan-privacy/
+│
+├── configs/
+│   └── default.yaml
+│
+├── data/
+│   ├── README.md
+│   ├── raw/
+│   └── processed/
+│
+├── src/
+│   ├── data.py
+│   ├── gan.py
+│   ├── attacks.py
+│   ├── evaluation.py
+│   ├── game.py
+│   ├── experiments.py
+│   └── cli.py
+│
+├── tests/
+│
+├── results/
+│   ├── raw/
+│   ├── tables/
+│   ├── figures/
+│   └── processed/
+│
+├── reports/
+│   └── research_report.md
+│
+├── requirements.txt
+└── README.md
+```
 
-## Limitations
+### Description of Important Modules
 
-The score-gap regularizer may fail to improve privacy or may reduce data utility. The shadow attack uses a simple distance-feature classifier and is not exhaustive. The project uses one benchmark dataset and a compact GAN; conclusions may not generalize to other data or model families. Training time increases with the number of seeds, lambdas, epochs and shadow models. No DP baseline is included because a correct privacy accountant and compatible tabular training implementation would be a separate research contribution.
+| File | Functionality |
+|---|---|
+| `data.py` | Dataset downloading, preprocessing, encoding, and splitting |
+| `gan.py` | GAN architecture and privacy regularization |
+| `attacks.py` | Membership inference attack implementations |
+| `evaluation.py` | Utility and feature-distribution evaluation |
+| `game.py` | Stackelberg game solver and payoff calculations |
+| `experiments.py` | Experiment execution, result aggregation, and reporting |
+| `cli.py` | Command-line interface |
+| `default.yaml` | Experiment and game configuration |
 
-## References
+---
 
-- Xu et al. (2019), “Modeling Tabular Data using Conditional GAN,” NeurIPS. <https://papers.nips.cc/paper/8953-modeling-tabular-data-using-conditional-gan>
-- Shokri et al. (2017), “Membership Inference Attacks against Machine Learning Models,” IEEE S&P. <https://doi.org/10.1109/SP.2017.41>
-- Hyeong et al. (2022), “An Empirical Study on the Membership Inference Attack against Tabular Data Synthesis Models.” <https://arxiv.org/abs/2208.08114>
-- UCI Adult dataset. <https://archive.ics.uci.edu/dataset/2/adult>
+## 10. Experimental Outputs
+
+The project generates several outputs to evaluate the effectiveness of the proposed approach.
+
+| Output File | Description |
+|---|---|
+| `results/raw/experiments.csv` | Individual experiment measurements |
+| `results/raw/failures.csv` | Failed experiment configurations |
+| `results/tables/summary.csv` | Aggregated results and statistical summaries |
+| `results/tables/game_solution.csv` | Attacker best responses and owner payoffs |
+| `results/tables/strategy_comparison.csv` | Comparison of four strategy conditions |
+| `results/tables/sensitivity.csv` | Sensitivity analysis |
+| `results/figures/` | Generated experimental plots |
+| `results/processed/synthetic_preview.csv` | Preview of generated synthetic data |
+| `reports/research_report.md` | Automatically generated research report |
+
+### Strategy Comparison
+
+The project evaluates four conditions:
+
+1. **Ordinary GAN:** No privacy regularization (`lambda = 0`).
+2. **Fixed Regularization:** Uses a predefined privacy regularization strength.
+3. **Game-Selected Regularization:** Uses the privacy strategy selected by the Stackelberg game.
+4. **Utility-Selected Regularization:** Selects the privacy strength based on mean utility without considering the attacker's payoff.
+
+All four conditions are evaluated using the attacker's measured best-response release budget.
+
+---
+
+## 11. Research Limitations
+
+The project has the following limitations:
+
+- The score-gap regularization mechanism is an empirical heuristic and does not provide formal differential privacy guarantees.
+- A low membership inference attack score does not establish that all privacy leakage has been eliminated.
+- Only one benchmark dataset is used.
+- The shadow-model attack is based on a relatively simple distance-feature classifier.
+- The GAN architecture is compact and may not generalize to more complex datasets.
+- The Stackelberg solution is optimal only within the configured finite strategy grids.
+- No formal Differential Privacy (DP) baseline is included.
+
+These limitations are considered when interpreting the experimental results.
+
+---
+
+## 12. References and Resources
+
+The following research papers and resources provide the theoretical foundation for the implementation.
+
+**1. Conditional GAN for Tabular Data**
+
+Xu et al. (2019).
+
+"Modeling Tabular Data using Conditional GAN."
+
+NeurIPS 2019.
+
+https://papers.nips.cc/paper/8953-modeling-tabular-data-using-conditional-gan
+
+**2. Membership Inference Attacks**
+
+Shokri et al. (2017).
+
+"Membership Inference Attacks against Machine Learning Models."
+
+IEEE Symposium on Security and Privacy.
+
+https://doi.org/10.1109/SP.2017.41
+
+**3. Membership Inference Attacks on Tabular Data Synthesis**
+
+Hyeong et al. (2022).
+
+"An Empirical Study on the Membership Inference Attack against Tabular Data Synthesis Models."
+
+https://arxiv.org/abs/2208.08114
+
+**4. UCI Adult Income Dataset**
+
+UCI Machine Learning Repository.
+
+https://archive.ics.uci.edu/dataset/2/adult
+
+**5. PyTorch Documentation**
+
+https://pytorch.org/docs/stable/index.html
+
+**6. Scikit-learn Documentation**
+
+https://scikit-learn.org/stable/
+
+---
+
+## 13. Conclusion
+
+This project demonstrates how Game Theory can be integrated with Generative Adversarial Networks to study privacy–utility trade-offs in synthetic tabular data generation.
+
+By combining privacy regularization, membership inference attacks, and Stackelberg game optimization, the implementation provides an experimental framework for understanding how a data owner can select privacy strategies while accounting for an adaptive attacker.
+
+The primary objective is to investigate whether game-theoretic strategy selection can provide a better balance between synthetic data utility and resistance to membership inference attacks.
+
+---
+
+**Project Contributors**
+
+- ARUNJAY SACHAN (I24AI024)
+- PURVA SOLANKI (I24AI013)
+
+**Project Domain:** Game Theory + Generative Adversarial Networks + Data Privacy
+
+**Repository:** [GitHub Repository Link – To Be Added]
