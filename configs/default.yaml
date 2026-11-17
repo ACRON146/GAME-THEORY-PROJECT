@@ -1,0 +1,55 @@
+dataset:
+  name: UCI Adult
+  raw_dir: data/raw
+  processed_dir: data/processed
+  sample_rows: 0  # 0 uses all prepared rows; set a positive value for a pilot.
+  features: [age, education-num, hours-per-week, workclass, education, marital-status, occupation, relationship]
+  target: income
+split:
+  member_fraction: 0.60
+  reference_fraction: 0.10  # Used by the training objective; not an attack non-member set.
+  nonmember_fraction: 0.15 # Untouched by GAN/regularizer training and used for MIA evaluation.
+  test_fraction: 0.15      # Held out for downstream utility evaluation.
+training:
+  latent_dim: 32
+  hidden_dim: 64
+  batch_size: 128
+  epochs: 30
+  learning_rate: 0.0002
+  seeds: [11, 23, 37]
+  smoke_seeds: [11, 23]
+  smoke_epochs: 2
+  smoke_rows: 800
+privacy:
+  lambdas: [0, 0.25, 0.5, 1, 2, 5]
+attack:
+  budgets: [1, 2, 5, 10] # b is the number of independent synthetic release batches.
+  smoke_budgets: [1, 2]
+  max_candidates: 1000
+  bootstrap_reps: 100
+  shadow_models: 2
+game:
+  alphas: [0, 0.25, 0.5, 1, 2, 5]
+  selection_alpha: 2
+  fixed_lambda: 1
+  owner_cost_scale: 0.03
+  attacker_cost_per_batch: 0.005
+  attacker_cost_sensitivity: [0, 0.0025, 0.005, 0.01, 0.025]
+  lambda_grid_sensitivity:
+    - [0, 0.5, 1, 2, 5]
+    - [0, 1, 5]
+  tie_break: lower_strategy
+paths:
+  experiment_id: adult_game_theoretic_gan_v2
+  raw_results: results/raw/experiments.csv
+  failures: results/raw/failures.csv
+  baseline_results: results/raw/baseline.csv
+  run_config: results/run_config.json
+  summary: results/tables/summary.csv
+  game: results/tables/game_solution.csv
+  strategy_comparison: results/tables/strategy_comparison.csv
+  sensitivity: results/tables/sensitivity.csv
+  mia_feasibility: results/tables/mia_feasibility.csv
+  synthetic_preview: results/processed/synthetic_preview.csv
+  figures: results/figures
+  report: reports/research_report.md
