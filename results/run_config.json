@@ -1,0 +1,143 @@
+{
+  "budgets": [
+    1,
+    2,
+    5,
+    10
+  ],
+  "config": {
+    "attack": {
+      "bootstrap_reps": 100,
+      "budgets": [
+        1,
+        2,
+        5,
+        10
+      ],
+      "max_candidates": 1000,
+      "shadow_models": 2,
+      "smoke_budgets": [
+        1,
+        2
+      ]
+    },
+    "dataset": {
+      "features": [
+        "age",
+        "education-num",
+        "hours-per-week",
+        "workclass",
+        "education",
+        "marital-status",
+        "occupation",
+        "relationship"
+      ],
+      "name": "UCI Adult",
+      "processed_dir": "data/processed",
+      "raw_dir": "data/raw",
+      "sample_rows": 0,
+      "target": "income"
+    },
+    "game": {
+      "alphas": [
+        0,
+        0.25,
+        0.5,
+        1,
+        2,
+        5
+      ],
+      "attacker_cost_per_batch": 0.005,
+      "attacker_cost_sensitivity": [
+        0,
+        0.0025,
+        0.005,
+        0.01,
+        0.025
+      ],
+      "fixed_lambda": 1,
+      "lambda_grid_sensitivity": [
+        [
+          0,
+          0.5,
+          1,
+          2,
+          5
+        ],
+        [
+          0,
+          1,
+          5
+        ]
+      ],
+      "owner_cost_scale": 0.03,
+      "selection_alpha": 2,
+      "tie_break": "lower_strategy"
+    },
+    "paths": {
+      "baseline_results": "results/raw/baseline.csv",
+      "experiment_id": "adult_game_theoretic_gan_v2",
+      "failures": "results/raw/failures.csv",
+      "figures": "results/figures",
+      "game": "results/tables/game_solution.csv",
+      "mia_feasibility": "results/tables/mia_feasibility.csv",
+      "raw_results": "results/raw/experiments.csv",
+      "report": "reports/research_report.md",
+      "run_config": "results/run_config.json",
+      "sensitivity": "results/tables/sensitivity.csv",
+      "strategy_comparison": "results/tables/strategy_comparison.csv",
+      "summary": "results/tables/summary.csv",
+      "synthetic_preview": "results/processed/synthetic_preview.csv"
+    },
+    "privacy": {
+      "lambdas": [
+        0,
+        0.25,
+        0.5,
+        1,
+        2,
+        5
+      ]
+    },
+    "split": {
+      "member_fraction": 0.6,
+      "nonmember_fraction": 0.15,
+      "reference_fraction": 0.1,
+      "test_fraction": 0.15
+    },
+    "training": {
+      "batch_size": 128,
+      "epochs": 30,
+      "hidden_dim": 64,
+      "latent_dim": 32,
+      "learning_rate": 0.0002,
+      "seeds": [
+        11,
+        23,
+        37
+      ],
+      "smoke_epochs": 2,
+      "smoke_rows": 800,
+      "smoke_seeds": [
+        11,
+        23
+      ]
+    }
+  },
+  "config_fingerprint": "e2b4bcbc9b01",
+  "epochs": 30,
+  "lambdas": [
+    0.0,
+    0.25,
+    0.5,
+    1.0,
+    2.0,
+    5.0
+  ],
+  "mode": "full",
+  "seeds": [
+    11,
+    23,
+    37
+  ]
+}
